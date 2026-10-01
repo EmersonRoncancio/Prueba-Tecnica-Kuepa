@@ -5,8 +5,15 @@ import mongoose from 'mongoose'
 const { Schema } = mongoose 
 
 export interface ILead {
-  incremental: number;
-  number: string;
+  incremental?: number;
+  full_name: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  mobile_phone: string;
+  interestProgram: mongoose.Types.ObjectId;
+  status: 'active' | 'inactive';
+  trackings: Array<{ tracking: mongoose.Types.ObjectId; description?: string }>;
 }
 
 const LeadSchema = new Schema({
@@ -14,12 +21,12 @@ const LeadSchema = new Schema({
     //numero unico de 4 digitos 
     type: Schema.Types.Number,
   },
-  full_name: {type: Schema.Types.String},
-  first_name: {type: Schema.Types.String},
-  last_name: {type: Schema.Types.String},
-  email: {type: Schema.Types.String},
-  mobile_phone: {type: Schema.Types.String},
-  interestProgram: {type: Schema.Types.ObjectId, ref: 'Program'},
+  full_name: {type: Schema.Types.String, trim: true},
+  first_name: {type: Schema.Types.String, required: true, trim: true},
+  last_name: {type: Schema.Types.String, required: true, trim: true},
+  email: {type: Schema.Types.String, required: true, trim: true, lowercase: true},
+  mobile_phone: {type: Schema.Types.String, required: true, trim: true},
+  interestProgram: {type: Schema.Types.ObjectId, ref: 'Program', required: true},
   status:{
     type: Schema.Types.String,
     enum: ['active', 'inactive'],

@@ -8,6 +8,9 @@ import { GlobalRoute } from '@app/domains/global/globalRoute'
 import { UserRoute } from '@app/domains/user/userRoute'
 import { AuthRoute } from '@app/domains/auth/authRoute'
 import { ThirdRoute } from '@app/domains/third/thirdRoute'
+import { ProgramRoute } from '@app/domains/program/programRoute'
+import { TrackingRoute } from '@app/domains/tracking/trackingRoute'
+import { LeadRoute } from '@app/domains/lead/leadRoute'
 
 class Routes {
   
@@ -22,6 +25,9 @@ class Routes {
   private globalRoute: GlobalRoute
   private authRoute: AuthRoute
   private userRoute: UserRoute
+  private programRoute: ProgramRoute
+  private trackingRoute: TrackingRoute
+  private leadRoute: LeadRoute
 
   constructor(app: Application) {
     this.app = app
@@ -32,6 +38,9 @@ class Routes {
     this.globalRoute = new GlobalRoute(this.app, this.prefix)
     this.userRoute = new UserRoute(this.app, this.prefix)
     this.authRoute = new AuthRoute(this.app, this.prefix)
+    this.programRoute = new ProgramRoute(this.app, this.prefix)
+    this.trackingRoute = new TrackingRoute(this.app, this.prefix)
+    this.leadRoute = new LeadRoute(this.app, this.prefix)
 
   }
 
@@ -44,6 +53,9 @@ class Routes {
       this.globalRoute.init()
       this.userRoute.init()
       this.authRoute.init()
+      this.programRoute.init()
+      this.trackingRoute.init()
+      this.leadRoute.init()
 
     } catch (error) {
       console.log('error', error)

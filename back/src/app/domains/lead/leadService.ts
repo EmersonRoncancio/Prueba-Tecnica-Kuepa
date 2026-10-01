@@ -3,14 +3,18 @@
 // @import_services
 
 // @import_models
-import { Lead, Campaign, Third, Adnetwork, Tracking, Message, Interaction } from "@app/models"
+import { Lead, Program, Tracking } from "@app/models"
 
 // @import_utilities
 import { responseUtility } from "@core/utilities/responseUtility"
-import moment from "moment";
+import { validateLead, isObjectId } from "@app/domains/lead/leadValidator"
 
 // @import_types
 
+const POPULATE = [
+  { path: 'interestProgram' },
+  { path: 'trackings.tracking' },
+]
 
 class LeadService {
   
@@ -18,308 +22,87 @@ class LeadService {
   constructor () {}
   
   public async upsert (_params) {
-    try{ 
-      if(_params.user){
-        const third = await Third.findOne({user: _params.user}).lean()
-        if(!third) return responseUtility.error('third.not_found1');
-        _params.adviser = third._id
-      }
-      
-      if(_params.third){
-        const third = await Third.findOne({_id: _params.third}).lean()
-        if(!third) return responseUtility.error('third.not_found2');
-        _params.adviser = third._id
-      }
-      
-      let last_tracking = _params?.trackings?.[_params?.trackings?.length - 1]
-      if(last_tracking?.new){
-        const tracking = await Tracking.findOne({_id: last_tracking.tracking}).lean()
-        if(tracking?.target_status){
-          _params.status = tracking.target_status
-        }
-        if(!last_tracking.has_next_date && _params.status !== 'sold'){
-          _params.status = 'dropped'
-        }
-      }
-      
-      if(_params._id){
-        const exists = await Lead.findOne({_id: _params._id}).lean()
-        if(!exists) return responseUtility.error('lead.not_found');
-        
-        const lead = await Lead.findOneAndUpdate({_id: _params._id}, {$set: _params}, {new:true, lean:true})
-        
-        
-        return responseUtility.success({
-          object: lead
-        })
-      } else {
-        const create = await Lead.create(_params)
-        const lead = create.toObject()
-        
-        
-        return responseUtility.success({
-          object: lead
-        })
-      }
-    } catch (error) {
-      console.log('error', error)
-    }
-  }
-  
-  public async adviserInfo (_params){
     try{
-      const third = await Third.findOne({user: _params.user}).lean()
-      if(!third) return responseUtility.error('third.not_found',null, {code: 404});
-      
-      const where_campaigns = {
-        status: 'active',
-      }
-      let select_campaigns = 'name users.$'
-      if(_params.campaign){
-        where_campaigns['_id'] = _params.campaign
-        select_campaigns = 'name users'
-      } else {
-        where_campaigns['users.third'] = third._id
+      const { errors, values } = validateLead(_params)
+      if(Object.keys(errors).length){
+        return responseUtility.error('lead.invalid', null, { code: 400, errors })
       }
       
-      const campaigns = await Campaign.find(where_campaigns)
-      .select(select_campaigns)
-      .sort({created_at:1})
-      .lean()
+      const program = await Program.findOne({_id: values.interestProgram}).lean()
+      if(!program) return responseUtility.error('program.not_found', null, { code: 404 })
       
-      const _adnetworks = {}
-      campaigns.forEach(_c=>{
-        _c.users.forEach(_u=>{
-          _u.adnetworks.forEach(_a=>{
-            _adnetworks[_a] = _c._id
-          })
-        })
+      const duplicated = await Lead.findOne({email: values.email}).lean()
+      if(duplicated) return responseUtility.error('lead.email.duplicated', null, { code: 409 })
+      
+      const initial = await Tracking.findOne({}).sort({order: 1}).lean()
+      if(!initial) return responseUtility.error('tracking.not_configured', null, { code: 500 })
+      
+      const { description, ...fields } = values
+      const created = await Lead.create({
+        ...fields,
+        full_name: `${fields.first_name} ${fields.last_name}`,
+        trackings: [{ tracking: initial._id, description }],
       })
       
-      const [ adnetworks, leads, trackings] = await Promise.all([
-        Adnetwork.find({
-          status: 'active',
-          _id: { $in: Object.keys(_adnetworks) }
-        })
-        .lean(),
-        Lead.find({
-          campaign: { $in: campaigns.map((_c:any)=>{return _c._id}) },
-          status: {$in:['active', 'grading']},
-          contact:  _params.contact
-        })
-        .lean(),
-        Tracking.find({
-          status: 'active'
-        })
-      ])
+      const lead = await Lead.findOne({_id: created._id}).populate(POPULATE).lean()
       
       return responseUtility.success({
-        campaigns,
-        leads, 
-        adnetworks,
-        parser: _adnetworks,
-        trackings
+        object: lead
       })
     } catch (error) {
       console.log('error', error)
-    }
-  }
-  
-  public async external (_params) {
-    try{
-      
-      const create_interaction = {
-        target: 'human',
-        number: _params.number,
-        last_inbound: moment().toISOString(),
-        source: 'machine',
-        type: 'form',
-        status: 'ended',
-        messages:[],
-        _ref:{
-          lead: null,
-          adviser: null,
-          contact: null
-        }
-      }
-      
-      let third
-      if(_params.contact){
-        third = await Third.findOne({_id: _params.contact}).lean()
-      } else {
-        third = await Third.findOne({number: _params.number,  type: 'cli'}).lean()
-      }
-      if(third){
-        if(_params.content){
-          const message_created = await Message.create({
-            sender: third._id,
-            inbound: true,
-            content: _params.content,
-            number: _params.number,
-            type: 'form',
-            source: 'web',
-          })
-          create_interaction.messages.push(message_created._id)
-        }
-        const lead = _params.not_found ?? await Lead.findOne({ contact: third._id, status: {$in:['active', 'grading']}}).lean()
-        if(lead){
-          const tracking = await Tracking.findOne({ 'defaults.again': true}).lean()
-          await Lead.updateOne({_id: lead._id}, {
-            $push: {
-              trackings: {
-                ...(lead.trackings?.[lead.trackings.length -1] || {}),
-                tracking: tracking._id,
-                interest: 4,
-                created_at: moment().toISOString(),
-              }
-            }
-          })
-          
-          create_interaction._ref.lead = lead._id
-          create_interaction._ref.adviser = third._id
-          create_interaction._ref.contact = lead.contact
-          
-          await Interaction.create(create_interaction)
-          
-          return responseUtility.success({
-            object: lead
-          })
-        } else {
-          const adnetwork = await Adnetwork.findOne({'defaults.organic': true}).lean()
-          const campaign = await Campaign.findOne({status: 'active', 'users.adnetworks': adnetwork._id})
-          .select('users.$')
-          .lean()
-          
-          return await this.upsert({
-            third: campaign.users[0].third, 
-            contact: third._id, 
-            adnetwork: adnetwork._id, 
-            campaign: campaign._id
-          })
-        }
-      } else {
-        const create = await Third.create({
-          email: _params.email,
-          first_name: _params.first_name,
-          last_name: _params.last_name,
-          number: _params.number,
-          status: 'active',
-          location:{
-            type: 'Point',
-            coordinates: [0, 0]
-          },
-          type: 'cli',
-        })
-        const third = create.toObject()
-        const adnetwork = await Adnetwork.findOne({'defaults.organic': true}).lean()
-        const campaign = await Campaign.findOne({status: 'active', 'users.adnetworks': adnetwork._id})
-        .select('users.$')
-        .lean()
-
-        //TODO: Balance
-        if(_params.content){
-          const message_created = await Message.create({
-            sender: third._id,
-            inbound: true,
-            content: _params.content,
-            number: _params.number,
-            type: 'form',
-            source: 'web',
-          })
-          create_interaction.messages.push(message_created._id)
-        }
-        
-        const lead_created = await this.upsert({
-          third: campaign.users[0].third, 
-          contact: third._id, 
-          adnetwork: adnetwork._id, 
-          campaign: campaign._id
-        })
-        
-        create_interaction._ref.lead = lead_created.object._id
-        create_interaction._ref.adviser = third._id
-        create_interaction._ref.contact = lead_created.object.contact
-        if(!_params.ignore_interaction){
-          await Interaction.create(create_interaction)
-        }
-        return lead_created
-      }
-    } catch (error) {
-      console.log('error', error)
+      return responseUtility.error('server.error', null, { code: 500 })
     }
   }
   
   public async list (_params) {
     try{
-      const where:any = {}
+      const list = await Lead.find({})
+      .sort({created_at: -1})
+      .populate(POPULATE)
+      .lean()
       
-      let third
-      
-      if(_params.user){
-        third = await Third.findOne({user: _params.user}).lean()
-        if(third) where.adviser = third._id.toString()
+      return responseUtility.success({
+        list
+      })
+    } catch (error) {
+      console.log('error', error)
+      return responseUtility.error('server.error', null, { code: 500 })
+    }
+  }
+  
+  public async move (_params:{_id:string, tracking:string, description?:string}) {
+    try{
+      const errors: Record<string, string> = {}
+      if(!isObjectId(_params._id)) errors._id = 'lead.id.invalid'
+      if(!isObjectId(_params.tracking)) errors.tracking = 'tracking.id.invalid'
+      if(Object.keys(errors).length){
+        return responseUtility.error('lead.invalid', null, { code: 400, errors })
       }
       
+      const [lead, tracking] = await Promise.all([
+        Lead.findOne({_id: _params._id}).lean(),
+        Tracking.findOne({_id: _params.tracking}).lean(),
+      ])
+      if(!lead) return responseUtility.error('lead.not_found', null, { code: 404 })
+      if(!tracking) return responseUtility.error('tracking.not_found', null, { code: 404 })
       
-      let leads = await Lead.find(where)
-      .sort({created_at:-1})
-      .populate({
-        path: 'contact',
-        select: 'first_name last_name document number',
-        options: { lean:true }
-      })
-      .limit(100)
+      const description = typeof _params.description === 'string' ? _params.description.trim() : ''
+      
+      const moved = await Lead.findOneAndUpdate(
+        {_id: lead._id},
+        {$push: {trackings: {tracking: tracking._id, description}}},
+        {new: true}
+      )
+      .populate(POPULATE)
       .lean()
-      
-      leads = leads.map(_l=>{
-        _l.full_name = `${_l.contact?.first_name} ${_l.contact?.last_name}`.trim()
-        return _l
-      })
       
       return responseUtility.success({
-        list:leads
+        object: moved
       })
     } catch (error) {
       console.log('error', error)
-    }
-  }
-  
-  public async test (_params) {
-    try{
-      
-    } catch (error) {
-      console.log('error', error)
-    }
-  }
-  
-
-  
-  public async get (_params:{_id:string}) {
-    try{
-      const lead = await Lead.findOne({_id: _params._id})
-      .populate({
-        path: 'contact',
-        select: 'first_name last_name incremental document number',
-        options: { lean:true }
-      })
-      .lean()
-      
-      if(!lead) return responseUtility.error('lead.not_found');
-      const interactions = await Interaction.find({'_ref.lead': _params._id})
-      .populate({
-        path: 'messages',
-        select: 'inbound from to content created_at',
-        options: { lean:true }
-      })
-      .sort({crated_at:-1})
-      .lean()
-      return responseUtility.success({
-        lead,
-        interactions
-      })
-      
-    } catch (error) {
-      console.log('error', error)
+      return responseUtility.error('server.error', null, { code: 500 })
     }
   }
 }
