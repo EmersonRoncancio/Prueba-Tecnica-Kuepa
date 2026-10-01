@@ -20,6 +20,7 @@
     "jsx": "react-jsx",
 
     "noImplicitAny": false,
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     
     /* Linting */
     "strict": false,
