@@ -20,18 +20,6 @@ class LeadController {
 
   constructor () {}
 
-  public test = async(req: Request, res: Response) => {
-    const _params = req._data()
-    const response = await this.service.test(_params)
-    return responseUtility.build(res, response)
-  }
-
-  public adviserInfo = async(req: Request, res: Response) => {
-    const _params = req._data()
-    const response = await this.service.adviserInfo(_params)
-    return responseUtility.build(res, response)
-  }
-
   public upsert = async(req: Request, res: Response) => {
     const _params = req._data()
     const response = await this.service.upsert(_params)
@@ -44,15 +32,9 @@ class LeadController {
     return responseUtility.build(res, response)
   }
 
-  public get = async(req: Request, res: Response) => {
+  public move = async(req: Request, res: Response) => {
     const _params = req._data()
-    const response = await this.service.get(_params)
-    return responseUtility.build(res, response)
-  }
-  
-  public external = async(req: Request, res: Response) => {
-    const _params = req._data()
-    const response = await this.service.external(_params)
+    const response = await this.service.move(_params)
     return responseUtility.build(res, response)
   }
 }
