@@ -27,6 +27,30 @@ class App {
     }
   }
 
+  /**
+   * Registers middlewares and routes on the Express application without
+   * connecting to Mongo or listening, so it can be exercised by tests.
+   */
+  public build(): express.Application {
+    if (process.env.NODE_ENV !== 'test') {
+      this.app.use(morgan('dev'))
+    }
+
+    this.app.use(express.json({limit: '40mb'}))
+
+    this.app.use(urlencoded({ extended: false }))
+
+    this.app.use(cors())
+    this.app.use(request_mw())
+
+    this.app.get('/', (req, res) => {
+        res.send('API is running')
+    })
+
+    this.routes.init()
+    return this.app
+  }
+
   public async init() {
     if(!global.env) global.env = {}
     
@@ -34,23 +58,9 @@ class App {
 
     this.dataBaseUtility.connectMongo() 
 
-    if (global.env.mode === 'dev' || true) {
-      this.app.use(morgan('dev'))
-    }
-    
-    this.app.use(express.json({limit: '40mb'}))
-
-    this.app.use(urlencoded({ extended: false }))
-
-    this.app.use(cors())
-    this.app.use(request_mw())
-    
-    this.app.get('/', (req, res) => {
-        res.send('API is running')
-    })
+    this.build()
 
     const PORT:string = global.env.port || 5000
-    this.routes.init()
     const server  = this.app.listen(PORT, console.log(`Server running  ${PORT}`))
   }
 
