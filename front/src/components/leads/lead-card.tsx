@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Mail, Phone } from 'lucide-react'
+import type { HTMLAttributes } from 'react'
 import type { Lead, Tracking } from '@/services/types'
 import { initials } from '@/util/lead-pipeline'
 import { LeadMoveSelect } from './lead-move-select'
@@ -10,14 +11,19 @@ interface LeadCardProps {
   /** Stages the lead can move to (the current one is excluded). */
   targets: Tracking[]
   moving?: boolean
+  dragging?: boolean
+  dragProps?: HTMLAttributes<HTMLElement>
   onMove: (lead: Lead, trackingId: string) => void
 }
 
-export function LeadCard({ lead, targets, moving, onMove }: LeadCardProps) {
+export function LeadCard({ lead, targets, moving, dragging, dragProps, onMove }: LeadCardProps) {
   const created = formatDistanceToNow(new Date(lead.created_at), { addSuffix: true, locale: es })
   return (
     <article
-      className={`flex flex-col gap-3 rounded-xl border border-orange-100 bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${moving ? 'opacity-60' : ''}`}
+      {...dragProps}
+      title="Arrastra para mover"
+      aria-roledescription="tarjeta arrastrable"
+      className={`flex cursor-grab flex-col gap-3 rounded-xl border border-orange-100 bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing ${dragging ? 'rotate-2 opacity-50' : moving ? 'opacity-60' : ''}`}
     >
       <header className="flex items-center gap-3">
         <span

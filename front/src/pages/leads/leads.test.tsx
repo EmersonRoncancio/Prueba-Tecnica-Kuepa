@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Leads from './leads'
 import { leadService } from '@/services/leadService'
@@ -121,5 +121,70 @@ describe('Leads page', () => {
     await user.click(screen.getByRole('button', { name: /nuevo prospecto/i }))
 
     expect(await screen.findByRole('dialog', { name: /nuevo prospecto/i })).toBeInTheDocument()
+  })
+
+  describe('drag and drop', () => {
+    const dataTransfer = () => {
+      const store: Record<string, string> = {}
+      return {
+        setData: (k: string, v: string) => { store[k] = v },
+        getData: (k: string) => store[k] ?? '',
+        effectAllowed: '', dropEffect: '',
+      }
+    }
+    const card = (name: string) => screen.getByText(name).closest('article') as HTMLElement
+
+    it('marks cards as draggable with a hint', async () => {
+      render(<Leads />)
+      await screen.findByText('Luis Gómez')
+      expect(card('Luis Gómez')).toHaveAttribute('draggable', 'true')
+      expect(card('Luis Gómez')).toHaveAttribute('aria-roledescription', 'tarjeta arrastrable')
+      expect(card('Luis Gómez')).toHaveAttribute('title', 'Arrastra para mover')
+    })
+
+    it('moves a lead to the column where it is dropped', async () => {
+      move.mockResolvedValue({
+        code: 200, status: 'success',
+        object: { ...luis, trackings: [...luis.trackings, { tracking: stages[2] }] },
+      } as never)
+      render(<Leads />)
+      await screen.findByText('Luis Gómez')
+      const dt = dataTransfer()
+
+      fireEvent.dragStart(card('Luis Gómez'), { dataTransfer: dt })
+      expect(card('Luis Gómez')).toHaveClass('opacity-50')
+      fireEvent.dragOver(column('Matriculado'), { dataTransfer: dt })
+      expect(column('Matriculado')).toHaveClass('bg-orange-100')
+      fireEvent.drop(column('Matriculado'), { dataTransfer: dt })
+
+      expect(move).toHaveBeenCalledWith({ _id: 'b', tracking: 't3' })
+      await waitFor(() => expect(within(column('Matriculado')).getByText('Luis Gómez')).toBeInTheDocument())
+      expect(column('Matriculado')).not.toHaveClass('bg-orange-100')
+    })
+
+    it('ignores a drop on the lead\'s own column', async () => {
+      render(<Leads />)
+      await screen.findByText('Luis Gómez')
+      const dt = dataTransfer()
+
+      fireEvent.dragStart(card('Luis Gómez'), { dataTransfer: dt })
+      fireEvent.dragOver(column('Nuevo'), { dataTransfer: dt })
+      fireEvent.drop(column('Nuevo'), { dataTransfer: dt })
+
+      expect(move).not.toHaveBeenCalled()
+    })
+
+    it('toasts and keeps the lead when a dropped move fails', async () => {
+      move.mockResolvedValue({ code: 404, status: 'error', message: 'tracking.not_found' } as never)
+      render(<Leads />)
+      await screen.findByText('Luis Gómez')
+      const dt = dataTransfer()
+
+      fireEvent.dragStart(card('Luis Gómez'), { dataTransfer: dt })
+      fireEvent.drop(column('Matriculado'), { dataTransfer: dt })
+
+      await waitFor(() => expect(move).toHaveBeenCalled())
+      expect(within(column('Nuevo')).getByText('Luis Gómez')).toBeInTheDocument()
+    })
   })
 })

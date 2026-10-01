@@ -1,3 +1,4 @@
+import type { useLeadDrag } from '@/hooks/use-lead-drag'
 import type { Lead, Tracking } from '@/services/types'
 import { stageAccents } from '@/util/lead-pipeline'
 import { LeadCard } from './lead-card'
@@ -9,15 +10,18 @@ interface LeadColumnProps {
   stages: Tracking[]
   movingId: string | null
   onMove: (lead: Lead, trackingId: string) => void
+  drag: ReturnType<typeof useLeadDrag>
 }
 
-export function LeadColumn({ stage, index, leads, stages, movingId, onMove }: LeadColumnProps) {
+export function LeadColumn({ stage, index, leads, stages, movingId, onMove, drag }: LeadColumnProps) {
   const accent = stageAccents[index % stageAccents.length]
+  const over = drag.overStageId === stage._id
   const targets = stages.filter((s) => s._id !== stage._id)
   return (
     <section
       aria-label={`Etapa ${stage.name}`}
-      className={`flex w-72 shrink-0 snap-start flex-col rounded-xl border border-t-4 border-orange-100 bg-orange-50/60 ${accent.border}`}
+      {...drag.columnProps(stage._id)}
+      className={`flex w-72 shrink-0 snap-start flex-col rounded-xl border border-t-4 transition-colors ${accent.border} ${over ? 'border-orange-400 bg-orange-100' : 'border-orange-100 bg-orange-50/60'}`}
     >
       <header className="flex items-center justify-between px-3 py-3">
         <h2 className="flex items-center gap-2 text-sm font-bold text-orange-950">
@@ -35,7 +39,7 @@ export function LeadColumn({ stage, index, leads, stages, movingId, onMove }: Le
           </p>
         )}
         {leads.map((lead) => (
-          <LeadCard key={lead._id} lead={lead} targets={targets} moving={movingId === lead._id} onMove={onMove} />
+          <LeadCard key={lead._id} lead={lead} targets={targets} moving={movingId === lead._id} dragging={drag.draggingId === lead._id} dragProps={drag.cardProps(lead)} onMove={onMove} />
         ))}
       </div>
     </section>
