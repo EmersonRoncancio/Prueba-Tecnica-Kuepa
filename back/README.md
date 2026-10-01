@@ -28,7 +28,7 @@ npm run cli -- --seeder programSeeder -f    # academic programs
 npm run cli -- --seeder trackingSeeder -f   # pipeline stages (Nuevo ... Descartado)
 ```
 
-`npm run cli -- --x` runs every seeder that has not been launched yet.
+`npm run cli -- --seeder -x` runs every seeder that has not been launched yet.
 
 ## Tests
 
