@@ -36,7 +36,7 @@ function Login () {
           home: response.home
         })
         setError(null)
-        location(`/home`)
+        location(`/leads`)
       } else {
         setError('Usuario o contraseña incorrectos')
       }
@@ -50,7 +50,7 @@ function Login () {
     }
     if(token.get() && access.get() && user.get()){
       setTimeout(()=>{
-        location(`/home`)
+        location(`/leads`)
       },1000)
     } 
   },[_token, $token])
@@ -73,7 +73,7 @@ function Login () {
           can: can
         })
       }
-      location(`/home`)
+      location(`/leads`)
     } else {
       setError('Usuario o contraseña incorrectos')
     }
