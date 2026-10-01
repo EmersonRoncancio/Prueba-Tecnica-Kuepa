@@ -53,15 +53,38 @@ describe('validateLead', () => {
     expect(validateLead({ ...valid(), email }).errors.email).toBe('lead.email.invalid')
   })
 
-  it.each(['123456', '1234567890123456', 'abc1234567', '+', '12+3456789'])(
-    'rejects invalid mobile phone %s',
-    (mobile_phone) => {
-      expect(validateLead({ ...valid(), mobile_phone }).errors.mobile_phone).toBe('lead.mobile_phone.invalid')
-    }
-  )
+  it.each([
+    '123456',
+    '1234567890123456',
+    'abc1234567',
+    '+',
+    '12+3456789',
+    '1234567',
+    '601 234 5678',
+    '6012345678',
+    '300123456',
+    '30012345678',
+    '+1 300 123 4567',
+    '+583001234567',
+    '3001234abc',
+    '+57 601 234 5678',
+  ])('rejects invalid mobile phone %s', (mobile_phone) => {
+    expect(validateLead({ ...valid(), mobile_phone }).errors.mobile_phone).toBe('lead.mobile_phone.invalid')
+  })
 
-  it.each(['1234567', '+123456789012345', '3001234567'])('accepts mobile phone %s', (mobile_phone) => {
-    expect(validateLead({ ...valid(), mobile_phone }).errors.mobile_phone).toBeUndefined()
+  it.each([
+    '3001234567',
+    '300 123 4567',
+    '300-123-4567',
+    '(300) 123.4567',
+    '573001234567',
+    '57 300 123 4567',
+    '+573001234567',
+    '+57 300 123 4567',
+  ])('accepts and normalizes mobile phone %s', (mobile_phone) => {
+    const { errors, values } = validateLead({ ...valid(), mobile_phone })
+    expect(errors.mobile_phone).toBeUndefined()
+    expect(values.mobile_phone).toBe('+573001234567')
   })
 
   it('rejects an invalid program id', () => {

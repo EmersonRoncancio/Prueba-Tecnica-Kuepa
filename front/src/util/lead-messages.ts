@@ -10,7 +10,7 @@ const messages: Record<string, string> = {
   'lead.email.invalid': 'Ingresa un correo electrónico válido.',
   'lead.email.duplicated': 'Este correo ya está registrado.',
   'lead.mobile_phone.required': 'El teléfono es obligatorio.',
-  'lead.mobile_phone.invalid': 'El teléfono debe tener entre 7 y 15 dígitos (puede iniciar con +).',
+  'lead.mobile_phone.invalid': 'Ingresa un celular colombiano válido (10 dígitos, empieza por 3).',
   'lead.interestProgram.required': 'Selecciona un programa de interés.',
   'lead.interestProgram.invalid': 'Selecciona un programa válido.',
   'lead.description.too_long': 'La nota no puede superar los 500 caracteres.',

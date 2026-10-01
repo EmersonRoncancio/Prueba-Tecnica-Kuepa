@@ -49,5 +49,5 @@ All endpoints require `Authorization: Bearer <token>` (from `POST /api/auth/logi
 | GET | `/api/program` | Programs, sorted by name |
 | GET | `/api/tracking` | Pipeline stages, sorted by `order` |
 | GET | `/api/lead` | Leads (populated), newest first |
-| POST | `/api/lead/upsert` | Register a lead: `first_name`, `last_name`, `email`, `mobile_phone`, `interestProgram`, optional `description` |
+| POST | `/api/lead/upsert` | Register a lead: `first_name`, `last_name`, `email`, `mobile_phone` (Colombian mobile: `3XXXXXXXXX`, `57…` or `+57…`; stored as `+573XXXXXXXXX`), `interestProgram`, optional `description` |
 | POST | `/api/lead/move` | Move a lead to a stage: `_id`, `tracking`, optional `description` |

@@ -64,7 +64,7 @@ describe('LeadForm', () => {
       first_name: 'Ana',
       last_name: 'Pérez',
       email: 'ana@example.com',
-      mobile_phone: '3001234567',
+      mobile_phone: '+573001234567',
       interestProgram: '66f0c0ffee00000000000001',
       description: '',
     })
@@ -85,7 +85,7 @@ describe('LeadForm', () => {
     await fillValid(user)
     await user.click(screen.getByRole('button', { name: /registrar prospecto/i }))
 
-    expect(await screen.findByText(/teléfono.*7 y 15/i)).toBeInTheDocument()
+    expect(await screen.findByText(/celular colombiano válido/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/celular/i)).toHaveAttribute('aria-invalid', 'true')
     expect(onCreated).not.toHaveBeenCalled()
   })

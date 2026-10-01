@@ -25,13 +25,21 @@ export const emptyLeadForm: LeadFormValues = {
 const MAX_NAME = 100
 const MAX_DESCRIPTION = 500
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PHONE_PATTERN = /^\+?\d{7,15}$/
+// Colombian mobile: 3XXXXXXXXX, 573XXXXXXXXX or +573XXXXXXXXX (after stripping separators)
+const CO_MOBILE_PATTERN = /^(?:\+?57)?(3\d{9})$/
+
+/** Strips separators and normalizes a Colombian mobile to +573XXXXXXXXX; otherwise returns the stripped input. */
+const normalizePhone = (value: string): string => {
+  const stripped = value.trim().replace(/[\s\-().]/g, '')
+  const match = CO_MOBILE_PATTERN.exec(stripped)
+  return match ? `+57${match[1]}` : stripped
+}
 
 export const normalizeLeadForm = (values: LeadFormValues): LeadFormValues => ({
   first_name: values.first_name.trim(),
   last_name: values.last_name.trim(),
   email: values.email.trim().toLowerCase(),
-  mobile_phone: values.mobile_phone.trim().replace(/[\s-]/g, ''),
+  mobile_phone: normalizePhone(values.mobile_phone),
   interestProgram: values.interestProgram.trim(),
   description: values.description.trim(),
 })
@@ -50,7 +58,7 @@ export const validateLeadForm = (input: LeadFormValues): LeadFormErrors => {
   else if (!EMAIL_PATTERN.test(v.email)) errors.email = 'lead.email.invalid'
 
   if (!v.mobile_phone) errors.mobile_phone = 'lead.mobile_phone.required'
-  else if (!PHONE_PATTERN.test(v.mobile_phone)) errors.mobile_phone = 'lead.mobile_phone.invalid'
+  else if (!CO_MOBILE_PATTERN.test(v.mobile_phone)) errors.mobile_phone = 'lead.mobile_phone.invalid'
 
   if (!v.interestProgram) errors.interestProgram = 'lead.interestProgram.required'
 

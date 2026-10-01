@@ -44,20 +44,40 @@ describe('validateLeadForm', () => {
     expect(validateLeadForm({ ...valid, email }).email).toBe('lead.email.invalid')
   })
 
-  it.each(['300 123 4567', '300-123-4567', '+57 300 123 4567', '1234567'])(
-    'accepts phone %s',
-    (mobile_phone) => {
-      expect(validateLeadForm({ ...valid, mobile_phone }).mobile_phone).toBeUndefined()
-    }
-  )
+  it.each([
+    '3001234567',
+    '300 123 4567',
+    '300-123-4567',
+    '(300) 123.4567',
+    '573001234567',
+    '57 300 123 4567',
+    '+573001234567',
+    '+57 300 123 4567',
+  ])('accepts phone %s', (mobile_phone) => {
+    expect(validateLeadForm({ ...valid, mobile_phone }).mobile_phone).toBeUndefined()
+  })
 
-  it.each(['123456', '1'.repeat(16), 'abc1234567', '30012+34567'])('rejects phone %s', (mobile_phone) => {
+  it.each([
+    '123456',
+    '1234567',
+    '1'.repeat(16),
+    'abc1234567',
+    '30012+34567',
+    '601 234 5678',
+    '6012345678',
+    '300123456',
+    '30012345678',
+    '+1 300 123 4567',
+    '+583001234567',
+    '3001234abc',
+    '+57 601 234 5678',
+  ])('rejects phone %s', (mobile_phone) => {
     expect(validateLeadForm({ ...valid, mobile_phone }).mobile_phone).toBe('lead.mobile_phone.invalid')
   })
 })
 
 describe('normalizeLeadForm', () => {
-  it('trims, lowercases the email and strips phone separators', () => {
+  it('trims, lowercases the email and normalizes the phone', () => {
     expect(
       normalizeLeadForm({
         ...valid,
@@ -72,6 +92,12 @@ describe('normalizeLeadForm', () => {
       mobile_phone: '+573001234567',
       description: 'hola',
     })
+  })
+})
+
+describe('normalizeLeadForm phone formats', () => {
+  it.each(['3001234567', '300-123-4567', '573001234567', '+57 (300) 123.4567'])('normalizes %s', (mobile_phone) => {
+    expect(normalizeLeadForm({ ...valid, mobile_phone }).mobile_phone).toBe('+573001234567')
   })
 })
 

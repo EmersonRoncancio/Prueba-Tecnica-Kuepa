@@ -25,13 +25,21 @@ export interface ILeadValidation {
 const MAX_NAME = 100
 const MAX_DESCRIPTION = 500
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PHONE_PATTERN = /^\+?\d{7,15}$/
+// Colombian mobile: 3XXXXXXXXX, 573XXXXXXXXX or +573XXXXXXXXX (after stripping separators)
+const CO_MOBILE_PATTERN = /^(?:\+?57)?(3\d{9})$/
 const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/
 
 export const isObjectId = (value: unknown): value is string =>
   typeof value === 'string' && OBJECT_ID_PATTERN.test(value)
 
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
+
+/** Strips separators and normalizes a Colombian mobile to +573XXXXXXXXX; otherwise returns the stripped input. */
+const normalizePhone = (value: string): string => {
+  const stripped = value.replace(/[\s\-().]/g, '')
+  const match = CO_MOBILE_PATTERN.exec(stripped)
+  return match ? `+57${match[1]}` : stripped
+}
 
 /**
  * Validates and normalizes the lead registration payload.
@@ -43,8 +51,7 @@ export const validateLead = (input: ILeadInput = {}): ILeadValidation => {
   const first_name = text(input.first_name)
   const last_name = text(input.last_name)
   const email = text(input.email).toLowerCase()
-  // spaces and hyphens are accepted as visual separators and dropped
-  const mobile_phone = text(input.mobile_phone).replace(/[\s-]/g, '')
+  const mobile_phone = normalizePhone(text(input.mobile_phone))
   const interestProgram = text(input.interestProgram)
   const description = text(input.description)
 
@@ -58,7 +65,7 @@ export const validateLead = (input: ILeadInput = {}): ILeadValidation => {
   else if (!EMAIL_PATTERN.test(email)) errors.email = 'lead.email.invalid'
 
   if (!mobile_phone) errors.mobile_phone = 'lead.mobile_phone.required'
-  else if (!PHONE_PATTERN.test(mobile_phone)) errors.mobile_phone = 'lead.mobile_phone.invalid'
+  else if (!CO_MOBILE_PATTERN.test(mobile_phone)) errors.mobile_phone = 'lead.mobile_phone.invalid'
 
   if (!interestProgram) errors.interestProgram = 'lead.interestProgram.required'
   else if (!isObjectId(interestProgram)) errors.interestProgram = 'lead.interestProgram.invalid'
