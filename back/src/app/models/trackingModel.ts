@@ -10,6 +10,10 @@ const TrackingSchema = new Schema({
   },
   description:{
     type: Schema.Types.String,
+  },
+  order:{
+    type: Schema.Types.Number,
+    default: 0,
   }
 }, {
   collection: 'trackings', timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
